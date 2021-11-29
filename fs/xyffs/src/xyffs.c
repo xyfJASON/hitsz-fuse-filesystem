@@ -80,7 +80,8 @@ struct xyffs_dentry *newdentry(char *name, int type, int ino){
   newdentry->type = type;
   newdentry->ino = ino;
   newdentry->inode_pt = NULL;
-  newdentry->nxt = newdentry->fa = NULL;
+  newdentry->nxt = NULL;
+  newdentry->fa = NULL;
   return newdentry;
 }
 struct xyffs_inode *allocinode(struct xyffs_dentry *dentry, int type){
@@ -98,7 +99,7 @@ struct xyffs_inode *allocinode(struct xyffs_dentry *dentry, int type){
   }
   if(freeno == -1){
     printf("\033[1;31mNo free inodes to allocate!\033[0m\n");
-    return NULL;
+    return 0;
   }
   struct xyffs_inode *newinode = (struct xyffs_inode *)malloc(sizeof(struct xyffs_inode));
   newinode->ino = freeno;
@@ -147,10 +148,10 @@ struct xyffs_inode *get_inode_from_dentry(struct xyffs_dentry *dentry){
     for(int i = 0, offset = 0; i < inode->dircnt; i++, offset += sizeof(struct xyffs_dentry_d)){
       // 读入第i个目录项到subdentry_d
       if(i / dirs_per_blk != last_blkno){
-        offset = super.data_offset + inode->datablock[i/dirs_per_blk];
+        offset = (super.data_offset + inode->datablock[i/dirs_per_blk]) * 1024;
         last_blkno = i / dirs_per_blk;
       }
-      read_disk(offset * 1024, (char *)&subdentry_d, sizeof(struct xyffs_dentry_d));
+      read_disk(offset, (char *)&subdentry_d, sizeof(struct xyffs_dentry_d));
       // 建立对应内存目录项，插入链表，设置父指针
       struct xyffs_dentry *subdentry = newdentry(subdentry_d.name, subdentry_d.type, subdentry_d.ino);
       subdentry->nxt = inode->dentry_sons;
@@ -184,13 +185,13 @@ void write_back_recurse(struct xyffs_dentry *dentry){
     int cnt = 0;
     for(int offset = 0; pt; pt = pt->nxt, offset += sizeof(struct xyffs_dentry_d), cnt++){
       if(cnt / dirs_per_blk != last_blkno){
-        offset = super.data_offset + inode->datablock[cnt/dirs_per_blk];
+        offset = (super.data_offset + inode->datablock[cnt/dirs_per_blk]) * 1024;
         last_blkno = cnt / dirs_per_blk;
       }
       memcpy(dentry_d.name, pt->name, MAX_NAME_LEN);
       dentry_d.type = pt->type;
       dentry_d.ino = pt->ino;
-      write_disk(offset * 1024, (char *)&dentry_d, sizeof(struct xyffs_dentry_d));
+      write_disk(offset, (char *)&dentry_d, sizeof(struct xyffs_dentry_d));
       
       write_back_recurse(pt);
     }
