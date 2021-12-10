@@ -122,7 +122,7 @@ struct xyffs_inode *get_inode_from_dentry(struct xyffs_dentry *dentry){
   // 若inode是目录，则创建其目录项的subdentry内存结构并形成链表，同时父指针链接到dentry
   struct xyffs_inode *inode = (struct xyffs_inode *)malloc(sizeof(struct xyffs_inode));
   struct xyffs_inode_d inode_d;
-  read_disk((super.inode_offset * 1024 + dentry->ino * sizeof(struct xyffs_inode_d)), (char *)&inode_d, sizeof(struct xyffs_inode_d));
+  read_disk((super.inode_offset + dentry->ino) * 1024, (char *)&inode_d, sizeof(struct xyffs_inode_d));
   inode->ino = inode_d.ino;
   inode->size = inode_d.size;
   inode->type = inode_d.type;
@@ -175,7 +175,7 @@ void write_back_recurse(struct xyffs_dentry *dentry){
   inode_d.dircnt = inode->dircnt;
   for(int k = 0; k < 6; k++)
     inode_d.datablock[k] = inode->datablock[k];
-  write_disk((super.inode_offset * 1024 + inode->ino * sizeof(struct xyffs_inode_d)), (char *)&inode_d, sizeof(struct xyffs_inode_d));
+  write_disk((super.inode_offset + inode->ino) * 1024, (char *)&inode_d, sizeof(struct xyffs_inode_d));
 
   // 写data
   if(dentry->type == T_DIR){
